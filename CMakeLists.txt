@@ -26,6 +26,7 @@ endif()
 
 # 一定要放在最后面，因为前面的设置放后面可能导致子项目先编译但是配置还没生效
 add_subdirectory(tinyhttpd)
+add_subdirectory(tradictional_c_pthread_socket_server)
 
 
 
