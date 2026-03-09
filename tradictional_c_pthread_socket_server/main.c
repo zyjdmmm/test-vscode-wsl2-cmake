@@ -51,6 +51,16 @@ cleanup: // 清理标签，用于统一处理资源释放
     pthread_exit(NULL); // 线程退出
 }
 
+/*
+总结一下流程：
+1、创建socket_fd套接字文件描述符(才用TCP和IPV4)
+2、允许端口复用(多个进程绑定到同一个端口)
+3、绑定IP和端口到socket_fd套接字文件描述符
+4、while
+    accept 函数：从半连接队列中取出一个连接，返回一个新的套接字文件描述符client_fd用于与客户端通信。
+
+*/
+
 int main() {
     // 1. 创建TCP Socket
     // AF_INET：使用IPv4地址族
@@ -85,7 +95,8 @@ int main() {
     }
 
     // 4. 监听
-    // 1024：最大连接队列长度，设置为较大值以处理更多并发连接
+    // 1024：最大连接队列长度，listen 函数的第二个参数 1024 并不是限制服务器最多只能连接 1024 个客户端，而是设置 TCP 连接的半连接队列长度 。
+    //半连接队列 指的是已经完成 TCP 三次握手但还没有被应用程序 accept() 函数处理的连接
     if (listen(server_fd, 1024) < 0) {
         perror("listen 失败"); // 打印错误信息
         close(server_fd); // 关闭套接字
@@ -123,7 +134,7 @@ int main() {
             free(client_fd); // 释放内存
             continue; // 继续下一次循环
         }
-        pthread_detach(tid); // 分离线程，自动释放资源，避免僵尸线程
+        pthread_detach(tid); // 分离线程，自动释放资源，不需要主线程调用 pthread_join，避免僵尸线程
     }
 
     close(server_fd); // 关闭服务器套接字（理论上不会执行到这里）
