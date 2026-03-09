@@ -29,6 +29,7 @@ add_subdirectory(tinyhttpd)
 add_subdirectory(tradictional_c_pthread_socket_server)
 add_subdirectory(tradictional_c_pthread_socket_client)
 add_subdirectory(libevent_c_server)
+add_subdirectory(libevent_c_server_for_reactor)
 
 
 
