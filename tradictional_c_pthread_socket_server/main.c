@@ -56,9 +56,14 @@ cleanup: // 清理标签，用于统一处理资源释放
 1、创建socket_fd套接字文件描述符(才用TCP和IPV4)
 2、允许端口复用(多个进程绑定到同一个端口)
 3、绑定IP和端口到socket_fd套接字文件描述符
-4、while
-    accept 函数：从半连接队列中取出一个连接，返回一个新的套接字文件描述符client_fd用于与客户端通信。
-
+4、listen监听
+5、while
+    accept 接受：从半连接队列(已经完成TCP三次连接)中取出一个连接，返回一个新的套接字文件描述符client_fd用于与客户端通信。
+    pthread_create创建子线程
+	{
+		read读取、write写入
+	}
+	
 */
 
 int main() {
