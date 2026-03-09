@@ -17,6 +17,7 @@ pkg_check_modules(${PROJECT_NAME}_DEPS REQUIRED # 在这里添加需要的系统
     glib-2.0
     openssl
     libevent
+    libevent_pthreads
     )
 
 #-------------------------------------------#
