@@ -24,7 +24,7 @@ pkg_check_modules(${PROJECT_NAME}_DEPS REQUIRED # 在这里添加需要的系统
 #-------------------------------------------#
 
 # 创建可执行文件目标(必须先于target_link_libraries生成)
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.c)
 
 # 配置头文件目录（自动提取 GTK3 和 Cairo 的所有头文件路径，无需手动写）
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_DEPS_INCLUDE_DIRS})
