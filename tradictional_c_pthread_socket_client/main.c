@@ -102,6 +102,14 @@ static void* client_request(void* arg) {
 /*
 测试方法：/mnt/d/myfile/myproject/test_project/test-vscode-wsl2-cmake$ ./build/tradictional_c_pthread_socket_client/tradictional_c_pthread_socket_client 14000
 结果：测试到14000开始不稳定有链接丢失了
+传统socket服务器性能低原因：
+1、查询ulimit -u发现一个进程只能创建15393个线程，线程过多创建失败
+2、线程切换耗时90%：每次上下文切换约需要 1~10 微秒，14000 个线程在 16 核 CPU 上，
+每秒会发生百万次切换,此时 CPU 100% 负载，但90% 以上的时间都在切换线程，只有不到 10% 的时间在处理实际业务
+3、服务器线程中存在多个阻塞操作，这些操作让线程 “占着资源不干活”（根本原因）：
+read()/recv()：等待客户端发数据时、usleep(DELAY_MS)：模拟接口耗时，线程完全阻塞、accept()（服务器侧）：等待网络响应时阻塞
+
+
 
 */
 int main(int argc, char* argv[]) {
