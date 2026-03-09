@@ -131,7 +131,7 @@ static void on_accept(struct evconnlistener* listener, evutil_socket_t fd,
     evutil_make_socket_nonblocking(fd);
     evutil_make_listen_socket_reuseable(fd);
 
-    // 创建bufferevent（适配旧版libevent，去掉BEV_OPT_CLOSE_ON_FREE）
+    // 创建bufferevent（适配旧版libevent）
     struct bufferevent* bev = bufferevent_socket_new(worker->base, fd, 0);
     if (!bev) {
         close(fd);
@@ -145,15 +145,20 @@ static void on_accept(struct evconnlistener* listener, evutil_socket_t fd,
 }
 
 int main() {
-    // 初始化libevent线程支持（必须）
-    evthread_use_pthreads();
-
     // 1. 创建8个从线程（每个绑定1个CPU核心）
     for (int i = 0; i < CPU_CORES; i++) {
         workers[i].cpu_id = i;
         workers[i].base = event_base_new();  // 每个从线程独立事件循环
+        if (!workers[i].base) {
+            perror("创建从线程事件循环失败");
+            return -1;
+        }
         pthread_t tid;
-        pthread_create(&tid, NULL, worker_thread, &workers[i]);
+        int ret = pthread_create(&tid, NULL, worker_thread, &workers[i]);
+        if (ret != 0) {
+            perror("创建从线程失败");
+            return -1;
+        }
         pthread_detach(tid);
     }
 
@@ -164,9 +169,10 @@ int main() {
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(SERVER_PORT);
 
-    // 创建监听器（主线程核心逻辑）
+    // 创建监听器（绑定到任意可用的event_base，这里用第一个从线程的base）
     struct evconnlistener* listener = evconnlistener_new_bind(
-        NULL, on_accept, NULL,
+        workers[0].base,  // 绑定到第一个从线程的事件循环（解决主线程无base的警告）
+        on_accept, NULL,
         LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE,
         1024, (struct sockaddr*)&server_addr, sizeof(server_addr)
     );
@@ -180,11 +186,16 @@ int main() {
     printf("CPU核心数：%d | 主线程接收连接 | 从线程处理业务\n", CPU_CORES);
     printf("服务器监听端口：%d\n", SERVER_PORT);
 
-    // 主线程阻塞（仅等待连接事件）
-    event_base_dispatch(event_base_new());
+    // 主线程阻塞等待（用pthread_join替代空的event_base_dispatch）
+    pthread_mutex_lock(&mutex);
+    pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+    pthread_cond_wait(&cond, &mutex);  // 永久阻塞，直到手动终止
 
-    // 资源释放
+    // 资源释放（实际不会执行到，除非发送信号终止）
     evconnlistener_free(listener);
     pthread_mutex_destroy(&mutex);
+    for (int i = 0; i < CPU_CORES; i++) {
+        event_base_free(workers[i].base);
+    }
     return 0;
 }
